@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DynamicDictionary.cs" />
     <Compile Include="InternalSnapshot.cs" />
     <Compile Include="Snapshot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

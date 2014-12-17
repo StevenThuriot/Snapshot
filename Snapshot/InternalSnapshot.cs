@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Dynamic;
-using System.Linq;
 using System.Reflection;
 
 namespace Snap
@@ -15,23 +13,23 @@ namespace Snap
         {
             if (Equals(instance, null)) return null;
 
-            IDictionary<string, object> expando = new ExpandoObject();
+            var dictionary = new Dictionary<string, object>();
 
             if (mapFields)
                 foreach (var field in _fields.Value)
                 {
                     var value = Map(field.GetValue(instance), mapProperties, true);
-                    expando.Add(field.Name, value);
+                    dictionary.Add(field.Name, value);
                 }
 
             if (mapProperties)
                 foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(typeof(T)))
                 {
                     var value = Map(property.GetValue(instance), true, mapFields);
-                    expando.Add(property.Name, value);
+                    dictionary.Add(property.Name, value);
                 }
 
-            return expando;
+            return new DynamicDictionary(dictionary);
         }
 
         private static object Map(object value, bool mapProperties, bool mapFields)
