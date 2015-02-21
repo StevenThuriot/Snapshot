@@ -1,49 +1,70 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Reflection;
 
 namespace Snap
 {
     static class InternalSnapshot<T>
     {
-        private static readonly Lazy<FieldInfo[]> _fields = new Lazy<FieldInfo[]>(() => typeof(T).GetFields());
+        private static readonly Lazy<MemberInfo[]> _members = new Lazy<MemberInfo[]>(() => typeof(T).GetMembers(BindingFlags.Instance | BindingFlags.Public));
 
-        public static dynamic Take(T instance, bool mapProperties, bool mapFields)
+        public static dynamic Take(T instance, bool mapProperties, bool mapFields, bool convertEnumsToString)
         {
             if (Equals(instance, null)) return null;
 
             var dictionary = new Dictionary<string, object>();
 
-            if (mapFields)
-                foreach (var field in _fields.Value)
+            foreach (var member in _members.Value)
+            {
+                if (mapFields)
                 {
-                    var value = Map(field.GetValue(instance), mapProperties, true);
-                    dictionary.Add(field.Name, value);
+                    var field = member as FieldInfo;
+                    if (field != null)
+                    {
+                        var value = Map(field.GetValue(instance), mapProperties, true, convertEnumsToString);
+                        dictionary.Add(field.Name, value);
+                        continue;
+                    }
                 }
 
-            if (mapProperties)
-                foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(typeof(T)))
+                if (mapProperties)
                 {
-                    var value = Map(property.GetValue(instance), true, mapFields);
-                    dictionary.Add(property.Name, value);
+                    var property = member as PropertyInfo;
+                    if (property != null)
+                    {
+#if NET40
+                        var propertyValue = property.GetValue(instance, null);
+#elif NET45
+                        var propertyValue = property.GetValue(instance);
+#endif
+
+                        var value = Map(propertyValue, true, mapFields, convertEnumsToString);
+                        dictionary.Add(property.Name, value);
+                    }
                 }
+            }
 
             return new DynamicDictionary(dictionary);
         }
 
-        private static object Map(object value, bool mapProperties, bool mapFields)
+        private static object Map(object value, bool mapProperties, bool mapFields, bool convertEnumsToString)
         {
             if (value == null)
                 return null;
 
             var type = value.GetType();
 
+            if (convertEnumsToString && type.IsEnum)
+                return value.ToString();
+
             if (type.IsValueType)
                 return value;
 
+            if (type == typeof (string))
+                return value;
+
             dynamic dynamicValue = value;
-            return Snapshot.Take(dynamicValue, mapProperties, mapFields);
+            return Snapshot.Take(dynamicValue, mapProperties, mapFields, convertEnumsToString);
         }
     }
 }
