@@ -34,7 +34,8 @@ namespace Snap
                     {
 #if NET40
                         var propertyValue = property.GetValue(instance, null);
-#elif NET45
+//#elif NET45
+#else
                         var propertyValue = property.GetValue(instance);
 #endif
 
